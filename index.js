@@ -4,12 +4,14 @@ const cors = require('cors');
 require('dotenv').config();
 const { dataBaseConnection } = require('./config/databaseConnection');
 const router = require('./route/router');
+const cookieParser = require('cookie-parser');
 
 app.use(cors({
-    origin: 'http://localhost:5173',
+    origin: 'https://portfolio-frontend-tau-ten.vercel.app/',
     credentials: true
 }));
 
+app.use(cookieParser());
 app.use(express.json());
 
 dataBaseConnection();

@@ -1,37 +1,107 @@
 const User = require('../model/user')
 const { sendMail } = require('../util/sendMail');
 require('dotenv').config();
+const jwt = require('jsonwebtoken');
+
+exports.userLogin = async (req, res) => {
+  try {
+    const { userName, password } = req.body;
+    if (!userName || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "all credentials are required"
+      })
+    }
+
+    // credentials matched
+    if (userName === process.env.MAIL_USER && password === process.env.password) {
+      const user = {
+        email: process.env.MAIL_USER,
+        role: "Admin"
+      }
+
+      // create a token
+      const token = jwt.sign(
+        user,
+        process.env.JWT_SECRET,
+        { expiresIn: '1d' }
+      );
+
+      return res.status(200).cookie('token', token, {
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000 // 1 day
+      }).json({
+        success: true,
+        message: 'Logged in and cookie sent',
+      })
+
+    }
+    else {
+      res.status(400).json({ success: false, message: 'Invalid credentials' });
+    }
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "internal server error unable to login"
+    })
+  }
+}
+
+exports.automaticLogin = async (req, res) => {
+  try {
+    const token = req.cookies.token
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: "no token found"
+      })
+    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (!decoded || decoded.email != process.env.MAIL_USER) {
+      return res.status(401).json({
+        success: false,
+        message: "invalid token"
+      })
+    }
+    return res.status(200).json({ success: true, message: "user logged in successful" })
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "authentication failed"
+    })
+  }
+}
 
 
 exports.sendMailToAdmin = async (req, res) => {
-    try {
-        const { name, email, message } = req.body;
-        if (!name || !email || !message) {
-            return res.status(400).json({
-                success: false,
-                message: "invalid credentials"
-            })
-        }
-        console.log(name, email, message)
+  try {
+    const { name, email, message } = req.body;
+    if (!name || !email || !message) {
+      return res.status(400).json({
+        success: false,
+        message: "invalid credentials"
+      })
+    }
+    console.log(name, email, message)
 
-        // add it to the database
-        const newUser = await User.findOne({ email });
-        if (newUser) {
-            newUser.queryRaised.push(message);
-            newUser.lastActive = Date.now();
-            await newUser.save();
-        }
-        else {
-            await User.create({
-                name,
-                email,
-                queryRaised: [message]
-            });
-        }
+    // add it to the database
+    const newUser = await User.findOne({ email });
+    if (newUser) {
+      newUser.queryRaised.push(message);
+      newUser.lastActive = Date.now();
+      await newUser.save();
+    }
+    else {
+      await User.create({
+        name,
+        email,
+        queryRaised: [message]
+      });
+    }
 
-        // now send the mail to the admin
-        const mailToAdmin =
-            `
+    // now send the mail to the admin
+    const mailToAdmin =
+      `
 
         <!DOCTYPE html>
 <html>
@@ -128,15 +198,15 @@ exports.sendMailToAdmin = async (req, res) => {
 
 
         `
-        try {
-            await sendMail(process.env.MAIL_USER, "service request from portfolio", mailToAdmin);
-        } catch (error) {
-            console.log("unable to send mail to admin ", error)
-        }
+    try {
+      await sendMail(process.env.MAIL_USER, "service request from portfolio", mailToAdmin);
+    } catch (error) {
+      console.log("unable to send mail to admin ", error)
+    }
 
-        // send mail to user for conformation
-        const conformationMailToUser =
-            `
+    // send mail to user for conformation
+    const conformationMailToUser =
+      `
             <!DOCTYPE html>
     <html>
     <head>
@@ -230,41 +300,41 @@ exports.sendMailToAdmin = async (req, res) => {
     </body>
     </html>
         `
-        await sendMail(email, "message from keshav", conformationMailToUser)
+    await sendMail(email, "message from keshav", conformationMailToUser)
 
-        return res.status(200).json({
-            success: true,
-            message: "successfully send mail to admin"
-        })
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: "internal server errro , unable to send mail to admin"
-        })
-    }
+    return res.status(200).json({
+      success: true,
+      message: "successfully send mail to admin"
+    })
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "internal server errro , unable to send mail to admin"
+    })
+  }
 }
 
 
 exports.sendMailToUser = async (req, res) => {
-    try {
-        const { email, name, message, query } = req.body;
-        if (!email || !name || !message || !query) {
-            return res.status(400).json({
-                success: false,
-                message: "invalid credentials"
-            })
-        }
+  try {
+    const { email, name, message, query } = req.body;
+    if (!email || !name || !message || !query) {
+      return res.status(400).json({
+        success: false,
+        message: "invalid credentials"
+      })
+    }
 
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(400).json({
-                success: false,
-                message: "user not found"
-            })
-        }
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "user not found"
+      })
+    }
 
-        const mailToUser =
-            `
+    const mailToUser =
+      `
         <!DOCTYPE html>
 <html>
 <head>
@@ -367,154 +437,132 @@ exports.sendMailToUser = async (req, res) => {
 </html>
 
         `
-        await sendMail(email, "mail by keshav regarding your service request", mailToUser);
+    await sendMail(email, "mail by keshav regarding your service request", mailToUser);
 
-        return res.status(200).json({
-            success: true,
-            message: "mail send succesfully"
-        })
+    return res.status(200).json({
+      success: true,
+      message: "mail send succesfully"
+    })
 
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: "internal server errro , unable to send mail to user"
-        })
-    }
-}
-exports.register = async (req, res) => {
-    try {
-        const { name, email, message } = req.body;
-        if (!name || !email || !message) {
-            return res.status(400).json({
-                success: false,
-                message: "invalid credentials"
-            })
-        }
-        // add it to the database
-        const newUser = await User.findOne({ email });
-        if (newUser) {
-            newUser.queryRaised.push(message);
-            newUser.lastActive = Date.now()
-            await newUser.save();
-        }
-        else {
-            await User.create({
-                name,
-                email,
-                queryRaised: [message]
-            });
-        }
-
-        return res.status(200).json(
-            {
-                success: true,
-                message: "user detail saved to database"
-            }
-        )
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: "internal server errror , unable to register user"
-        })
-    }
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "internal server errro , unable to send mail to user"
+    })
+  }
 }
 
 
 exports.makeUserActive = async (req, res) => {
-    try {
-        const { userId } = req.body;
-        if (!userId) {
-            return res.status(400)
-                .json({
-                    success: false,
-                    message: "all credentials are required"
-                })
-        }
-
-        const user = await User.findByIdAndUpdate(userId, { $set: { isActive: true } });
-        if (!user) {
-            return res.status(400)
-                .json({
-                    success: false,
-                    message: "no user found"
-                })
-        }
-
-        return res.status(200).json({
-            success: true,
-            message: "user added to active list"
+  try {
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400)
+        .json({
+          success: false,
+          message: "all credentials are required"
         })
-
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: "Server error , unable to add user in active list"
-        });
     }
+
+    const user = await User.findByIdAndUpdate(userId, { $set: { isActive: true } });
+    if (!user) {
+      return res.status(400)
+        .json({
+          success: false,
+          message: "no user found"
+        })
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "user added to active list"
+    })
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Server error , unable to add user in active list"
+    });
+  }
 }
 
 
 exports.removeUserActive = async (req, res) => {
-    try {
-        const { userId } = req.body;
-        if (!userId) {
-            return res.status(400)
-                .json({
-                    success: false,
-                    message: "all credentials are required"
-                })
-        }
-
-        const user = await User.findByIdAndUpdate(userId, { $set: { isActive: false } });
-        if (!user) {
-            return res.status(400)
-                .json({
-                    success: false,
-                    message: "no user found"
-                })
-        }
-
-        return res.status(200).json({
-            success: false,
-            message: "user removed from active list"
+  try {
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400)
+        .json({
+          success: false,
+          message: "all credentials are required"
         })
-
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: "Server error , unable to remove user in active list"
-        });
     }
+
+    const user = await User.findByIdAndUpdate(userId, { $set: { isActive: false } });
+    if (!user) {
+      return res.status(400)
+        .json({
+          success: false,
+          message: "no user found"
+        })
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "user removed from active list"
+    })
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Server error , unable to remove user in active list"
+    });
+  }
 }
 
 exports.deleteUser = async (req, res) => {
-    try {
-        const userId = req.params.userId;
-        if (!userId) {
-            return res.status(400)
-                .json({
-                    success: false,
-                    message: "all credentials are required"
-                })
-        }
-
-        const user = await User.findByIdAndDelete(userId);
-
-        if (!user) {
-            return res.status(400).json({
-                success: false,
-                message: "user deleted successfully"
-            })
-        }
-        return res.status(200).json({
-            success: true,
-            message: "user deleted successfully"
+  try {
+    const userId = req.params.userId;
+    if (!userId) {
+      return res.status(400)
+        .json({
+          success: false,
+          message: "all credentials are required"
         })
-
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: "Server error , unable to delete user"
-        });
     }
+
+    const user = await User.findByIdAndDelete(userId);
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "user deleted successfully"
+      })
+    }
+    return res.status(200).json({
+      success: true,
+      message: "user deleted successfully"
+    })
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Server error , unable to delete user"
+    });
+  }
+}
+
+exports.getAllUser = async (req, res) => {
+  try {
+    const allData = await User.find({}).lean();
+    return res.status(200).json({
+      success: true,
+      Users: allData
+    })
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "user not found"
+    })
+  }
 }
