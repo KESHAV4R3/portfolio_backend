@@ -7,10 +7,9 @@ const router = require('./route/router');
 const cookieParser = require('cookie-parser');
 
 app.use(cors({
-    origin: 'https://portfolio-frontend-tau-ten.vercel.app/',
+    origin: 'https://portfolio-frontend-tau-ten.vercel.app',
     credentials: true
 }));
-
 app.use(cookieParser());
 app.use(express.json());
 
