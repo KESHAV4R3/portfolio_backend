@@ -9,7 +9,10 @@ const router = require('./route/router')
 app.use(express.json());
 dataBaseConnection();
 app.use(router);
-app.use(cors());
+app.use(cors({
+    origin: 'http://localhost:5173',
+    credentials: true
+}));
 
 const port = process.env.PORT || 5001
 
