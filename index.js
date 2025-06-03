@@ -6,7 +6,7 @@ const { dataBaseConnection } = require('./config/databaseConnection');
 const router = require('./route/router');
 const cookieParser = require('cookie-parser');
 app.use(cors({
-    origin: ['https://portfolio-frontend-eight-lyart.vercel.app', 'http://localhost:5173'],
+    origin: ['https://portfolio-frontend-lac-theta.vercel.app', 'http://localhost:5173'],
     credentials: true
 }));
 
