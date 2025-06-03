@@ -5,11 +5,11 @@ require('dotenv').config();
 const { dataBaseConnection } = require('./config/databaseConnection');
 const router = require('./route/router');
 const cookieParser = require('cookie-parser');
-
 app.use(cors({
-    origin: 'https://portfolio-frontend-tau-ten.vercel.app',
+    origin: ['https://portfolio-frontend-tau-ten.vercel.app', 'http://localhost:5173'],
     credentials: true
 }));
+
 app.use(cookieParser());
 app.use(express.json());
 
