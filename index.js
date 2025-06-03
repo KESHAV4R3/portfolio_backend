@@ -5,9 +5,20 @@ require('dotenv').config();
 const { dataBaseConnection } = require('./config/databaseConnection');
 const router = require('./route/router');
 const cookieParser = require('cookie-parser');
+
+const allowedOrigins = ['https://portfolio-frontend-lac-theta.vercel.app', 'http://localhost:5173'];
+
 app.use(cors({
-    origin: ['https://portfolio-frontend-lac-theta.vercel.app', 'http://localhost:5173'],
-    credentials: true
+    origin: function (origin, callback) {
+        // allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) === -1) {
+            const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
+            return callback(new Error(msg), false);
+        }
+        return callback(null, true);
+    },
+    credentials: true,
 }));
 
 app.use(cookieParser());
