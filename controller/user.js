@@ -21,30 +21,39 @@ exports.userLogin = async (req, res) => {
       }
 
       // create a token
-      const token = jwt.sign(
-        user,
-        process.env.JWT_SECRET,
-        { expiresIn: '1d' }
-      );
+      try {
+        const token = jwt.sign(
+          user,
+          process.env.JWT_SECRET,
+          { expiresIn: '1d' }
+        );
 
-      return res.status(200).cookie('token', token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'None',
-        maxAge: 24 * 60 * 60 * 1000 // 1 day
-      }).json({
-        success: true,
-        message: 'Logged in and cookie sent',
-      })
+        return res.status(200).cookie('token', token, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'None',
+          maxAge: 24 * 60 * 60 * 1000 // 1 day
+        }).json({
+          success: true,
+          message: 'Logged in and cookie sent',
+        });
+      } catch (tokenError) {
+        console.error('Error creating JWT token:', tokenError);
+        throw new Error('Failed to create authentication token');
+      }
 
     }
     else {
-      res.status(400).json({ success: false, message: 'Invalid credentials' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid credentials' 
+      });
     }
   } catch (error) {
+    console.error('Login error:', error);
     return res.status(500).json({
       success: false,
-      message: "internal server error unable to login"
+      message: `Internal server error: ${error.message || 'Unable to login'}`
     })
   }
 }
@@ -84,7 +93,6 @@ exports.sendMailToAdmin = async (req, res) => {
         message: "invalid credentials"
       })
     }
-    console.log(name, email, message)
 
     // add it to the database
     const newUser = await User.findOne({ email });
@@ -203,7 +211,7 @@ exports.sendMailToAdmin = async (req, res) => {
     try {
       await sendMail(process.env.MAIL_USER, "service request from portfolio", mailToAdmin);
     } catch (error) {
-      console.log("unable to send mail to admin ", error)
+      console.error("Error sending admin email:", error);
     }
 
     // send mail to user for conformation
@@ -302,12 +310,20 @@ exports.sendMailToAdmin = async (req, res) => {
     </body>
     </html>
         `
-    await sendMail(email, "message from keshav", conformationMailToUser)
-
-    return res.status(200).json({
-      success: true,
-      message: "successfully send mail to admin"
-    })
+    try {
+      await sendMail(email, "message from keshav", conformationMailToUser);
+      
+      return res.status(200).json({
+        success: true,
+        message: "successfully sent mail to admin and confirmation to user"
+      });
+    } catch (error) {
+      console.error('Error sending confirmation email:', error);
+      return res.status(500).json({
+        success: false,
+        message: "Email to admin sent, but failed to send confirmation to user"
+      });
+    }
   } catch (error) {
     return res.status(500).json({
       success: false,
