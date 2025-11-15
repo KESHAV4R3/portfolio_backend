@@ -15,7 +15,7 @@ app.use(express.json());
 
 dataBaseConnection();
 app.use(router);
-const port = 5001;
+const port = 5000;
 
 app.listen(port, () => {
     console.log("Server started at port number", port);
