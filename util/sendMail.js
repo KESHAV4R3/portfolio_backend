@@ -16,29 +16,21 @@ exports.sendMail = async (to, subject, htmlContent) => {
                 pass: process.env.SMTP_PASSWORD
             },
             tls: {
-                rejectUnauthorized: false // Only for testing, remove in production
+                rejectUnauthorized: false
             }
         });
 
-        // Verify connection configuration
-        await transporter.verify();
-
         const mailOptions = {
-            from: process.env.EMAIL_FROM || `"Keshav Kumar" <${process.env.SMTP_USER}>`,
+            from: `"Keshav Kumar" <${process.env.SMTP_USER}>`,
             to,
             subject,
             html: htmlContent
         };
 
         const info = await transporter.sendMail(mailOptions);
-        console.log("✅ Email sent:", info.messageId);
         return info;
 
     } catch (error) {
-        console.error("❌ Email sending failed:", error.message);
-        if (error.response) {
-            console.error("SMTP Error Response:", error.response);
-        }
         throw error;
     }
 };

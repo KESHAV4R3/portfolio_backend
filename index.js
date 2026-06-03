@@ -14,8 +14,12 @@ app.use(cookieParser());
 app.use(express.json());
 
 dataBaseConnection();
+
+// app.get('/', (req, res) => {
+//     res.json({ status: 'ok', message: 'Portfolio Backend is running 🚀' });
+// });
 app.use(router);
-const port = 5000;
+const port = process.env.PORT || 8000;
 
 app.listen(port, () => {
     console.log("Server started at port number", port);
