@@ -5,7 +5,7 @@ exports.isAuthenticated = async (req, res, next) => {
     try {
         const token = req.cookies.token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        if (!decoded || decoded.email != process.env.MAIL_USER) {
+        if (!decoded || decoded.email != process.env.SMTP_USER) {
             return res.status(401).json({
                 success: false,
                 message: "invalid token"
