@@ -79,29 +79,41 @@ exports.automaticLogin = async (req, res) => {
 
 
 exports.sendMailToAdmin = async (req, res) => {
+  console.log('[sendMailToAdmin] ► Route hit | method:', req.method, '| IP:', req.ip || req.headers['x-forwarded-for']);
+
   try {
     const { name, email, message } = req.body;
+    console.log(`[sendMailToAdmin] [1] Request body received | name: "${name}" | email: "${email}" | message length: ${message?.length}`);
 
     if (!name || !email || !message) {
+      console.warn('[sendMailToAdmin] ⚠️  Missing required fields. Aborting.');
       return res.status(400).json({
         success: false,
         message: "invalid credentials"
       })
     }
 
+    // --- [2] DATABASE OPERATION ---
+    console.log(`[sendMailToAdmin] [2] Looking up user in DB with email: ${email}`);
     const newUser = await User.findOne({ email });
+
     if (newUser) {
+      console.log(`[sendMailToAdmin]     ✅ User found (id: ${newUser._id}). Updating queryRaised and lastActive.`);
       newUser.queryRaised.push(message);
       newUser.lastActive = Date.now();
       await newUser.save();
+      console.log('[sendMailToAdmin]     ✅ User record saved.');
     } else {
+      console.log('[sendMailToAdmin]     🔵 User not found. Creating new user record.');
       await User.create({
         name,
         email,
         queryRaised: [message]
       });
+      console.log('[sendMailToAdmin]     ✅ New user created.');
     }
 
+    // --- [3] MAIL TO ADMIN ---
     const mailToAdmin = `
 <!DOCTYPE html>
 <html>
@@ -118,12 +130,17 @@ exports.sendMailToAdmin = async (req, res) => {
 </body>
 </html>`;
 
+    console.log(`[sendMailToAdmin] [3] Attempting to send mail to ADMIN (${process.env.SMTP_USER})...`);
     try {
       await sendMail(process.env.SMTP_USER, "service request from portfolio", mailToAdmin);
-    } catch (error) {
-      // admin mail failed silently
+      console.log('[sendMailToAdmin]     ✅ Admin mail sent successfully.');
+    } catch (adminMailError) {
+      console.error('[sendMailToAdmin]     ❌ Admin mail FAILED:', adminMailError.message);
+      console.error('[sendMailToAdmin]        Stack:', adminMailError.stack);
+      // continuing — we still try to send confirmation to user
     }
 
+    // --- [4] CONFIRMATION MAIL TO USER ---
     const conformationMailToUser = `
 <!DOCTYPE html>
 <html>
@@ -140,25 +157,33 @@ exports.sendMailToAdmin = async (req, res) => {
 </body>
 </html>`;
 
+    console.log(`[sendMailToAdmin] [4] Attempting to send confirmation mail to USER (${email})...`);
     try {
       await sendMail(email, "message from keshav", conformationMailToUser);
+      console.log('[sendMailToAdmin]     ✅ User confirmation mail sent successfully.');
+      console.log('[sendMailToAdmin] ✅ ALL DONE — returning 200.');
       return res.status(200).json({
         success: true,
         message: "successfully sent mail to admin and confirmation to user"
       });
-    } catch (error) {
+    } catch (userMailError) {
+      console.error('[sendMailToAdmin]     ❌ User confirmation mail FAILED:', userMailError.message);
+      console.error('[sendMailToAdmin]        Stack:', userMailError.stack);
       return res.status(500).json({
         success: false,
         message: "Email to admin sent, but failed to send confirmation to user"
       });
     }
   } catch (error) {
+    console.error('[sendMailToAdmin] ❌ Unhandled error in sendMailToAdmin:', error.message);
+    console.error('[sendMailToAdmin]    Stack:', error.stack);
     return res.status(500).json({
       success: false,
       message: "internal server error, unable to send mail to admin"
     })
   }
 }
+
 
 
 exports.sendMailToUser = async (req, res) => {
