@@ -93,27 +93,7 @@ exports.sendMailToAdmin = async (req, res) => {
       })
     }
 
-    // --- [2] DATABASE OPERATION ---
-    console.log(`[sendMailToAdmin] [2] Looking up user in DB with email: ${email}`);
-    const newUser = await User.findOne({ email });
-
-    if (newUser) {
-      console.log(`[sendMailToAdmin]     ✅ User found (id: ${newUser._id}). Updating queryRaised and lastActive.`);
-      newUser.queryRaised.push(message);
-      newUser.lastActive = Date.now();
-      await newUser.save();
-      console.log('[sendMailToAdmin]     ✅ User record saved.');
-    } else {
-      console.log('[sendMailToAdmin]     🔵 User not found. Creating new user record.');
-      await User.create({
-        name,
-        email,
-        queryRaised: [message]
-      });
-      console.log('[sendMailToAdmin]     ✅ New user created.');
-    }
-
-    // --- [3] MAIL TO ADMIN ---
+    // --- [2] MAIL TO ADMIN ---
     const mailToAdmin = `
 <!DOCTYPE html>
 <html>
@@ -130,7 +110,7 @@ exports.sendMailToAdmin = async (req, res) => {
 </body>
 </html>`;
 
-    console.log(`[sendMailToAdmin] [3] Attempting to send mail to ADMIN (${process.env.SMTP_USER})...`);
+    console.log(`[sendMailToAdmin] [2] Attempting to send mail to ADMIN (${process.env.SMTP_USER})...`);
     try {
       await sendMail(process.env.SMTP_USER, "service request from portfolio", mailToAdmin);
       console.log('[sendMailToAdmin]     ✅ Admin mail sent successfully.');
@@ -157,7 +137,7 @@ exports.sendMailToAdmin = async (req, res) => {
 </body>
 </html>`;
 
-    console.log(`[sendMailToAdmin] [4] Attempting to send confirmation mail to USER (${email})...`);
+    console.log(`[sendMailToAdmin] [3] Attempting to send confirmation mail to USER (${email})...`);
     try {
       await sendMail(email, "message from keshav", conformationMailToUser);
       console.log('[sendMailToAdmin]     ✅ User confirmation mail sent successfully.');

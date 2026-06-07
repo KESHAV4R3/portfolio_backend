@@ -6,8 +6,8 @@ exports.dataBaseConnection = () => {
     mongoose.connect(url)
         .then(() => { console.log("database connection established") })
         .catch(err => {
-            console.log("unable to connect database, error -> " + err);
-            // currently holded the process.exit due to database is not active yet
-            // process.exit(1);
+            console.error("unable to connect database, error -> " + err.message);
+            // NOTE: Do NOT process.exit(1) on Vercel — it kills the serverless function
+            // Mail feature works independently without DB
         })
 }
