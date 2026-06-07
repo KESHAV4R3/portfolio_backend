@@ -7,6 +7,7 @@ exports.dataBaseConnection = () => {
         .then(() => { console.log("database connection established") })
         .catch(err => {
             console.log("unable to connect database, error -> " + err);
-            process.exit(1);
+            // currently holded the process.exit due to database is not active yet
+            // process.exit(1);
         })
 }
